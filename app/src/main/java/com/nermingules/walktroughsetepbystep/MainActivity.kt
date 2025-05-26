@@ -77,7 +77,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
 @Serializable
 data class WalkthroughStep(
     val title: String,
