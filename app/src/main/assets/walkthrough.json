@@ -1,0 +1,17 @@
+[
+  {
+    "title": "Profil",
+    "description": "Profil bilgilerinize buradan ulaşabilirsiniz.",
+    "targetKey": "profile"
+  },
+  {
+    "title": "Para Gönder",
+    "description": "Kolayca para transferi yapın.",
+    "targetKey": "transfer"
+  },
+  {
+    "title": "Hızlı İşlemler",
+    "description": "En sık kullandığınız işlemleri burada görebilirsiniz.",
+    "targetKey": "quick_actions"
+  }
+]
