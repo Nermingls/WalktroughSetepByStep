@@ -3,473 +3,436 @@ package com.nermingules.walktroughsetepbystep
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
+import com.nermingules.walktroughsetepbystep.ui.theme.HalkBankBlue
+import com.nermingules.walktroughsetepbystep.ui.theme.RoofLightGray
+import com.nermingules.walktroughsetepbystep.ui.theme.RoofOrange
+import com.nermingules.walktroughsetepbystep.ui.theme.WalktroughBlue
 import com.nermingules.walktroughsetepbystep.ui.theme.WalktroughSetepByStepTheme
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import java.io.InputStreamReader
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
             WalktroughSetepByStepTheme {
-                ExampleApp()
+                WalktroughSetepByStepApp()
             }
         }
     }
 }
-@Serializable
-data class WalkthroughStep(
-    val title: String,
-    val description: String,
-    val targetKey: String
-)
-
-data class TargetPosition(
-    val offset: Offset,
-    val size: Size
-)
 
 @Composable
-fun WalkthroughOverlay(
-    steps: List<WalkthroughStep>,
-    currentStep: Int,
-    targetPositions: Map<String, TargetPosition>,
-    onNext: () -> Unit,
-    onPrevious: () -> Unit,
-    onFinish: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val density = LocalDensity.current
-    val animatedAlpha by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = tween(300),
-        label = "overlay_alpha"
+fun WalktroughSetepByStepApp() {
+    val walkthroughSteps = rememberWalkthroughStepsFromAssets(
+        fileName = "walkthrough.json",
+        fallbackSteps = listOf(
+            WalkthroughStep(
+                id = "step_profile",
+                title = "Profil",
+                description = "Buradan profilinize erişebilirsiniz ve hesap bilgilerinizi görüntüleyebilirsiniz",
+                targetKey = "profile"
+            ),
+            WalkthroughStep(
+                id = "step_balance",
+                title = "Bakiye",
+                description = "Buradan profilinize erişebilirsiniz ve hesap bilgilerinizi görüntüleyebilirsiniz",
+                targetKey = "balance"
+            ),
+            WalkthroughStep(
+                id = "step_transfer",
+                title = "Para Transferi",
+                description = "Para transferi işlemlerinizi buradan yapabilirsiniz. Hızlı ve güvenli transfer seçenekleri.",
+                targetKey = "transfer"
+            ),
+            WalkthroughStep(
+                id = "step_quick_actions",
+                title = "Hızlı İşlemler",
+                description = "En sık kullandığınız işlemlere buradan erişebilirsiniz. Zamandan tasarruf edin!",
+                targetKey = "quick_actions",
+                buttonText = "Başlayalım!"
+            ),
+        )
     )
 
-    // Canvas boyutunu sakla
-    val canvasSize = remember { mutableStateOf(Size.Zero) }
+    val walkthroughState = rememberWalkthroughState(
+        steps = walkthroughSteps,
+        autoStart = false
+    )
 
-    if (currentStep < steps.size) {
-        val currentStepData = steps[currentStep]
-        val targetPosition = targetPositions[currentStepData.targetKey]
+    val customConfig = WalkthroughConfig(
+        overlayColor = WalktroughBlue.copy(alpha = 0.8f),
+        highlightPadding = 20f,
+        nextButtonText = "İleri",
+        previousButtonText = "Geri",
+        finishButtonText = "Anladım!",
+        stepCounterFormat = "({current}/{total})"
+    )
 
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .zIndex(1000f)
-                .graphicsLayer(alpha = animatedAlpha)
-        ) {
-            // Arka plan + delik
-            Canvas(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = RoofLightGray,
+            bottomBar = {
+                BottomNavigation(
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        ) { paddingValues ->
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .onSizeChanged {
-                        canvasSize.value = Size(it.width.toFloat(), it.height.toFloat())
-                    }
-                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                    .padding(paddingValues),
             ) {
-                drawRect(
-                    color = Color.Black.copy(alpha = 0.7f),
-                    size = this.size
-                )
 
-                targetPosition?.let { pos ->
-                    val padding = 16.dp.toPx()
-                    val highlightRect = Rect(
-                        offset = Offset(
-                            pos.offset.x - padding,
-                            pos.offset.y - padding
-                        ),
-                        size = Size(
-                            pos.size.width + padding * 2,
-                            pos.size.height + padding * 2
-                        )
+                item {
+                    TopAppBar(
+                        walkthroughState = walkthroughState,
+                        onStartWalkthrough = {
+                            walkthroughState.start()
+                        }
                     )
-
-                    drawRoundRect(
-                        color = Color.Transparent,
-                        topLeft = highlightRect.topLeft,
-                        size = highlightRect.size,
-                        cornerRadius = CornerRadius(12.dp.toPx()),
-                        blendMode = BlendMode.Clear
+                }
+                item {
+                    BankHomeScreen(
+                        walkthroughState = walkthroughState,
+                        onStartWalkthrough = {
+                            walkthroughState.start()
+                        },
+                        paddingValues = paddingValues
                     )
+                }
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
 
-            // Açıklama kartı
-            targetPosition?.let { pos ->
-                val cardOffset = calculateCardPosition(
-                    targetPosition = pos,
-                    canvasSize = canvasSize.value
-                )
+            WalkthroughOverlay(
+                walkthroughState = walkthroughState,
+                config = customConfig,
+                onStepChange = { step ->
+                    println("Adım değişti: ${step.title}")
+                },
+                onFinish = {
+                    println("Walkthrough tamamlandı!")
+                }
+            )
+        }
+    }
+}
 
-                Card(
-                    modifier = Modifier
-                        .offset(
-                            x = with(density) { cardOffset.x.toDp() },
-                            y = with(density) { cardOffset.y.toDp() }
-                        )
-                        .widthIn(max = 280.dp)
-                        .padding(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+@Composable
+fun BankHomeScreen(
+    walkthroughState: WalkthroughState,
+    onStartWalkthrough: () -> Unit,
+    paddingValues: PaddingValues
+) {
+    var  brusBlue = Brush.horizontalGradient(
+        colors = listOf(
+            HalkBankBlue,
+            Color(0xFF4CC9FE)
+        )
+    )
+    var  brusOrange = Brush.horizontalGradient(
+        colors = listOf(RoofOrange, Color(0xFFF1BA88))
+    )
+    Column(modifier = Modifier
+        .padding(top = 16.dp)
+    ) {
+        WalkthroughTarget(
+            key = "balance",
+            walkthroughState = walkthroughState
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.AccountCircle,
+                                contentDescription = null,
+                                tint = RoofOrange,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Vadesiz TL Hesabı",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Black
+                            )
+                        }
+
+                        Row {
+                            Spacer(modifier = Modifier.width(12.dp))
+                            OutlinedButton(
+                                onClick = { },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = RoofOrange
+                                ),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp, RoofOrange
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Tümü", fontSize = 14.sp)
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = "752 - 01075579",
+                        color = Color.Gray,
+                        fontSize = 14.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Kullanılabilir Bakiye",
+                        color = Color.Gray,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = "200,00 TL",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
-                            text = "${currentStepData.title} (${currentStep + 1}/${steps.size})",
+                            text = "Kullanılabilir Kredili Bakiye",
+                            color = Color.Gray,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text(
+                            text = "200,00 TL",
                             fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Medium,
                             color = Color.Black
                         )
+                    }
+                }
+            }
+        }
 
-                        Spacer(modifier = Modifier.height(8.dp))
 
-                        Text(
-                            text = currentStepData.description,
-                            fontSize = 14.sp,
-                            color = Color.Gray,
-                            textAlign = TextAlign.Start
-                        )
+        WalkthroughTarget(
+            key = "quick_actions",
+            walkthroughState = walkthroughState
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ActionButton(
+                        icon = painterResource(R.drawable.ic_transfer),
+                        title = "Para\nTransferi",
+                        backgroundBrush = brusBlue
+                    )
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                    ActionButton(
+                        icon = painterResource(R.drawable.ic_atm),
+                        title = "ATM'den\nPara Çek",
+                        backgroundBrush = brusBlue
+                    )
+                    ActionButton(
+                        icon = painterResource(R.drawable.ic_all_options),
+                        title = ("Tüm\nİşlemler"),
+                        backgroundBrush = brusOrange
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+        WalkthroughTarget(
+            key = "transfer",
+            walkthroughState = walkthroughState
+        ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                ) {
+                    Column {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    brush = brusOrange,
+                                    shape = RoundedCornerShape(
+                                        topStart = 8.dp,
+                                        topEnd = 8.dp
+                                    )
+                                )
+                                .padding(16.dp)
                         ) {
-                            if (currentStep > 0) {
-                                IconButton(onClick = onPrevious) {
-                                    Icon(
-                                        Icons.Default.ArrowBack,
-                                        contentDescription = "Önceki",
-                                        tint = Color.Blue
-                                    )
-                                }
-                            } else {
-                                Spacer(modifier = Modifier.size(48.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "HESAP HAREKETLERİ",
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    "Tümünü Gör >",
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
+                        }
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .height(70.dp)
+                                        .aspectRatio(1f)
+                                        .border(
+                                            1.dp,
+                                            Color.LightGray,
+                                            RoundedCornerShape(6.dp)
+                                        ),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text("MAY", fontSize = 10.sp, color = Color.Gray)
+                                    Text(
+                                        "13",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.Black.copy(0.7f)
+                                    )
+                                    Text("2025", fontSize = 10.sp, color = Color.Gray)
+                                }
 
-                            if (currentStep < steps.size - 1) {
-                                IconButton(onClick = onNext) {
-                                    Icon(
-                                        Icons.Default.ArrowForward,
-                                        contentDescription = "Sonraki",
-                                        tint = Color.Blue
+                                Spacer(modifier = Modifier.width(16.dp))
+
+                                Column(
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        text = "Para Transferi",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.Black.copy(alpha = 0.7f)
+                                    )
+                                    Text(
+                                        text = "NERMİN GÜLEŞ 'DAN GELEN FAST O...",
+                                        fontSize = 10.sp,
+                                        color = Color.Gray,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
-                            } else {
-                                TextButton(
-                                    onClick = onFinish,
-                                    colors = ButtonDefaults.textButtonColors(contentColor = Color.Blue)
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                Column(
+                                    horizontalAlignment = Alignment.End
                                 ) {
-                                    Text("Başla")
+                                    Text(
+                                        text = "200,00 TL",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.Black.copy(alpha = 0.7f)
+                                    )
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_receipt),
+                                        contentDescription = null,
+                                        tint = Color(0xFF2196F3),
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
                             }
                         }
                     }
+
                 }
-            }
         }
-    }
-}
-
-private fun calculateCardPosition(
-    targetPosition: TargetPosition,
-    canvasSize: Size
-): Offset {
-    val cardWidth = 280f
-    val cardHeight = 200f
-    val margin = 32f
-
-    // Güvenlik kontrolü - canvas boyutu henüz ayarlanmadıysa varsayılan değer kullan
-    if (canvasSize.width <= 0 || canvasSize.height <= 0) {
-        return Offset(margin, margin)
-    }
-
-    val targetCenterX = targetPosition.offset.x + targetPosition.size.width / 2
-    val targetCenterY = targetPosition.offset.y + targetPosition.size.height / 2
-
-    // Try to position card below target first
-    var cardX = targetCenterX - cardWidth / 2
-    var cardY = targetPosition.offset.y + targetPosition.size.height + margin
-
-    // Check if card fits below
-    if (cardY + cardHeight > canvasSize.height - margin) {
-        // Position above target
-        cardY = targetPosition.offset.y - cardHeight - margin
-    }
-
-    // Ensure card stays within screen horizontally - güvenli aralık kontrolü
-    val minX = margin
-    val maxX = (canvasSize.width - cardWidth - margin).coerceAtLeast(margin)
-    cardX = if (maxX > minX) {
-        cardX.coerceIn(minX, maxX)
-    } else {
-        minX
-    }
-
-    // Ensure card stays within screen vertically - güvenli aralık kontrolü
-    val minY = margin
-    val maxY = (canvasSize.height - cardHeight - margin).coerceAtLeast(margin)
-    cardY = if (maxY > minY) {
-        cardY.coerceIn(minY, maxY)
-    } else {
-        minY
-    }
-
-    return Offset(cardX, cardY)
-}
-
-@Composable
-fun TargetElement(
-    key: String,
-    onPositionChanged: (String, TargetPosition) -> Unit,
-    content: @Composable () -> Unit
-) {
-    Box(
-        modifier = Modifier.onGloballyPositioned { coordinates ->
-            val position = TargetPosition(
-                offset = coordinates.positionInRoot(),
-                size = Size(
-                    coordinates.size.width.toFloat(),
-                    coordinates.size.height.toFloat()
-                )
-            )
-            onPositionChanged(key, position)
-        }
-    ) {
-        content()
-    }
-}
-
-// Example usage
-@Composable
-fun ExampleApp() {
-    var currentStep by remember { mutableIntStateOf(0) }
-    var showWalkthrough by remember { mutableStateOf(true) }
-    var targetPositions by remember { mutableStateOf<Map<String, TargetPosition>>(emptyMap()) }
-    var walkthroughSteps by remember { mutableStateOf<List<WalkthroughStep>>(emptyList()) }
-
-    val context = LocalContext.current
-
-    // JSON'dan walkthrough adımlarını oku
-    LaunchedEffect(Unit) {
-        try {
-            val inputStream = context.assets.open("walkthrough.json")
-            val jsonText = InputStreamReader(inputStream).readText()
-            walkthroughSteps = Json.decodeFromString<List<WalkthroughStep>>(jsonText)
-        } catch (e: Exception) {
-            // JSON dosyası yoksa örnek veri kullan
-            walkthroughSteps = listOf(
-                WalkthroughStep(
-                    title = "Profil",
-                    description = "Buradan profilinize erişebilirsiniz",
-                    targetKey = "profile"
-                ),
-                WalkthroughStep(
-                    title = "Para Transferi",
-                    description = "Para transferi işlemlerinizi buradan yapabilirsiniz",
-                    targetKey = "transfer"
-                ),
-                WalkthroughStep(
-                    title = "Hızlı İşlemler",
-                    description = "En sık kullandığınız işlemlere buradan erişebilirsiniz",
-                    targetKey = "quick_actions"
-                )
-            )
-        }
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Main content
+        Spacer(modifier = Modifier.height(16.dp))
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFF1976D2))
-                .padding(16.dp)
+            modifier = Modifier.padding(horizontal = 16.dp)
         ) {
-            // Top bar with profile
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TargetElement(
-                    key = "profile",
-                    onPositionChanged = { key, position ->
-                        targetPositions = targetPositions + (key to position)
-                    }
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(60.dp)
-                            .clip(RoundedCornerShape(30.dp))
-                            .background(Color.White.copy(alpha = 0.2f))
-                    )
-                }
+            PromotionCard(
+                title = "Diğer Bankalarım",
+                subtitle = "Diğer banka hesaplarınızı kolayca yönetin.",
+                gradient = Brush.horizontalGradient(
+                    colors = listOf(HalkBankBlue, Color(0xFF8E24AA))
+                ),
+                imageId = R.drawable.user_profile
+            )
 
-                Text(
-                    text = "200,00 TL",
-                    color = Color.White,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Action buttons
-            TargetElement(
-                key = "transfer",
-                onPositionChanged = { key, position ->
-                    targetPositions = targetPositions + (key to position)
-                }
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    ActionButton("Para\nTransferi", Color.Blue)
-                    ActionButton("Fatura\nÖde", Color.Blue)
-                    ActionButton("Tüm\nİşlemler", Color.Gray)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Quick actions
-            TargetElement(
-                key = "quick_actions",
-                onPositionChanged = { key, position ->
-                    targetPositions = targetPositions + (key to position)
-                }
-            ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Hızlı İşlemler",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "En sık kullandığınız işlemler",
-                            color = Color.White.copy(alpha = 0.8f),
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-            }
-        }
-
-        // Walkthrough overlay
-        if (showWalkthrough && walkthroughSteps.isNotEmpty()) {
-            WalkthroughOverlay(
-                steps = walkthroughSteps,
-                currentStep = currentStep,
-                targetPositions = targetPositions,
-                onNext = { currentStep++ },
-                onPrevious = { currentStep-- },
-                onFinish = { showWalkthrough = false }
+            PromotionCard(
+                title = "Size Özel Kampanyalar",
+                subtitle = "",
+                gradient = Brush.horizontalGradient(
+                    colors = listOf(HalkBankBlue, Color(0xFF00ACC1))
+                ),
+                imageId = R.drawable.user_profile
             )
         }
     }
 }
 
-@Composable
-private fun ActionButton(text: String, color: Color) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable { }
-    ) {
-        Box(
-            modifier = Modifier
-                .size(60.dp)
-                .clip(RoundedCornerShape(30.dp))
-                .background(color),
-            contentAlignment = Alignment.Center
-        ) {
-            // Icon placeholder
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = text,
-            color = Color.White,
-            fontSize = 12.sp,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ExampleAppPreview() {
-    ExampleApp()
-}
