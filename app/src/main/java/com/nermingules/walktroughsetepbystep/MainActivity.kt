@@ -3,6 +3,7 @@ package com.nermingules.walktroughsetepbystep
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -48,6 +49,12 @@ fun WalktroughSetepByStepApp() {
                 title = "Profil",
                 description = "Buradan profilinize erişebilirsiniz ve hesap bilgilerinizi görüntüleyebilirsiniz",
                 targetKey = "profile"
+            ),
+            WalkthroughStep(
+                id = "step_search",
+                title = "Search",
+                description = "Buradan profilinize erişebilirsiniz ve hesap bilgilerinizi görüntüleyebilirsiniz",
+                targetKey = "search"
             ),
             WalkthroughStep(
                 id = "step_balance",
@@ -142,163 +149,168 @@ fun BankHomeScreen(
     onStartWalkthrough: () -> Unit,
     paddingValues: PaddingValues
 ) {
-    var  brusBlue = Brush.horizontalGradient(
+    var brusBlue = Brush.horizontalGradient(
         colors = listOf(
             HalkBankBlue,
             Color(0xFF4CC9FE)
         )
     )
-    var  brusOrange = Brush.horizontalGradient(
+    var brusOrange = Brush.horizontalGradient(
         colors = listOf(RoofOrange, Color(0xFFF1BA88))
     )
-    Column(modifier = Modifier
-        .padding(top = 16.dp)
+    Column(
+        modifier = Modifier
+            .padding(top = 16.dp)
     ) {
-        WalkthroughTarget(
-            key = "balance",
-            walkthroughState = walkthroughState
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+            WalkthroughTarget(
+                key = "balance",
+                walkthroughState = walkthroughState,
+                modifier = Modifier,
+                content = {
+                    Column(
+                        modifier = Modifier.padding(20.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.AccountCircle,
-                                contentDescription = null,
-                                tint = RoofOrange,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.AccountCircle,
+                                    contentDescription = null,
+                                    tint = RoofOrange,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Vadesiz TL Hesabı",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Black
+                                )
+                            }
+
+                            Row {
+                                Spacer(modifier = Modifier.width(12.dp))
+                                OutlinedButton(
+                                    onClick = { },
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = RoofOrange
+                                    ),
+                                    border = BorderStroke(
+                                        1.dp, RoofOrange
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Tümü", fontSize = 14.sp)
+                                }
+                            }
+                        }
+
+                        Text(
+                            text = "752 - 01075579",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "Kullanılabilir Bakiye",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = "200,00 TL",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
                             Text(
-                                text = "Vadesiz TL Hesabı",
-                                fontSize = 18.sp,
+                                text = "Kullanılabilir Kredili Bakiye",
+                                color = Color.Gray,
+                                fontSize = 14.sp,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text(
+                                text = "200,00 TL",
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = Color.Black
                             )
                         }
-
-                        Row {
-                            Spacer(modifier = Modifier.width(12.dp))
-                            OutlinedButton(
-                                onClick = { },
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = RoofOrange
-                                ),
-                                border = androidx.compose.foundation.BorderStroke(
-                                    1.dp, RoofOrange
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text("Tümü", fontSize = 14.sp)
-                            }
-                        }
                     }
-
-                    Text(
-                        text = "752 - 01075579",
-                        color = Color.Gray,
-                        fontSize = 14.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Kullanılabilir Bakiye",
-                        color = Color.Gray,
-                        fontSize = 14.sp
-                    )
-                    Text(
-                        text = "200,00 TL",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            )
+        }
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            WalkthroughTarget(
+                key = "quick_actions",
+                walkthroughState = walkthroughState,
+                modifier = Modifier,
+                content = {
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Kullanılabilir Kredili Bakiye",
-                            color = Color.Gray,
-                            fontSize = 14.sp,
-                            modifier = Modifier.padding(end = 8.dp)
+                        ActionButton(
+                            icon = painterResource(R.drawable.ic_transfer),
+                            title = "Para\nTransferi",
+                            backgroundBrush = brusBlue
                         )
-                        Text(
-                            text = "200,00 TL",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.Black
+
+                        ActionButton(
+                            icon = painterResource(R.drawable.ic_atm),
+                            title = "ATM'den\nPara Çek",
+                            backgroundBrush = brusBlue
+                        )
+                        ActionButton(
+                            icon = painterResource(R.drawable.ic_all_options),
+                            title = ("Tüm\nİşlemler"),
+                            backgroundBrush = brusOrange
                         )
                     }
                 }
-            }
-        }
 
-
-        WalkthroughTarget(
-            key = "quick_actions",
-            walkthroughState = walkthroughState
-        ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    ActionButton(
-                        icon = painterResource(R.drawable.ic_transfer),
-                        title = "Para\nTransferi",
-                        backgroundBrush = brusBlue
-                    )
-
-                    ActionButton(
-                        icon = painterResource(R.drawable.ic_atm),
-                        title = "ATM'den\nPara Çek",
-                        backgroundBrush = brusBlue
-                    )
-                    ActionButton(
-                        icon = painterResource(R.drawable.ic_all_options),
-                        title = ("Tüm\nİşlemler"),
-                        backgroundBrush = brusOrange
-                    )
-                }
-            }
+            )
         }
         Spacer(modifier = Modifier.height(16.dp))
-
-        WalkthroughTarget(
-            key = "transfer",
-            walkthroughState = walkthroughState
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-                ) {
+            WalkthroughTarget(
+                key = "transfer",
+                walkthroughState = walkthroughState,
+                modifier = Modifier,
+                content = {
                     Column {
                         Box(
                             modifier = Modifier
@@ -408,8 +420,11 @@ fun BankHomeScreen(
                     }
 
                 }
+
+            )
         }
         Spacer(modifier = Modifier.height(16.dp))
+
         Column(
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {

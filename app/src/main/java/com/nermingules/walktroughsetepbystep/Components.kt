@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nermingules.walktroughsetepbystep.WalkthroughTarget
 import com.nermingules.walktroughsetepbystep.ui.theme.HalkBankBlue
 import com.nermingules.walktroughsetepbystep.ui.theme.RoofDarkGrayBlue
 import com.nermingules.walktroughsetepbystep.ui.theme.RoofOrange
@@ -277,7 +278,6 @@ fun TopAppBar(
                 .padding(
                     start = 16.dp,
                     top = 32.dp,
-                    end = 16.dp,
                     bottom = 16.dp,
                 ),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -286,44 +286,48 @@ fun TopAppBar(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 WalkthroughTarget(
                     key = "profile",
-                    walkthroughState = walkthroughState
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(60.dp)
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.user_profile),
-                            contentDescription = "Profile Image",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape)
-                                .border(2.dp, Color.White, CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
+                    walkthroughState = walkthroughState,
+                    shape = WalkthroughShape.Circle,
+                    modifier = Modifier,
+                    content = {
                         Box(
                             modifier = Modifier
-                                .size(24.dp)
-                                .align(Alignment.BottomEnd)
-                                .clip(CircleShape)
-                                .background(Color.White)
-                                .border(
-                                    1.dp,
-                                    Color.Gray.copy(alpha = 0.2f),
-                                    CircleShape
-                                )
-                                .clickable { },
-                            contentAlignment = Alignment.Center
+                                .size(60.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "Settings",
-                                tint = HalkBankBlue,
-                                modifier = Modifier.size(24.dp * 0.6f)
+                            Image(
+                                painter = painterResource(id = R.drawable.user_profile),
+                                contentDescription = "Profile Image",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                                    .border(2.dp, Color.White, CircleShape),
+                                contentScale = ContentScale.Crop
                             )
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .align(Alignment.BottomEnd)
+                                    .clip(CircleShape)
+                                    .background(Color.White)
+                                    .border(
+                                        1.dp,
+                                        Color.Gray.copy(alpha = 0.2f),
+                                        CircleShape
+                                    )
+                                    .clickable { },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Settings",
+                                    tint = HalkBankBlue,
+                                    modifier = Modifier.size(24.dp * 0.6f)
+                                )
+                            }
                         }
                     }
-                }
+                )
+
                 Spacer(modifier = Modifier.width(8.dp))
                 if (!walkthroughState.isVisible) {
                     Button(
@@ -340,10 +344,16 @@ fun TopAppBar(
                     }
                 }
             }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Search, contentDescription = null, tint = Color.White)
-            }
+            WalkthroughTarget(
+                key = "search",
+                walkthroughState = walkthroughState,
+                modifier = Modifier,
+                shape = WalkthroughShape.Circle,
+                content = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Search, contentDescription = null, tint = Color.White)
+                    }
+                })
         }
 
         Row(

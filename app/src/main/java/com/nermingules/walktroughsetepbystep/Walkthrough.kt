@@ -19,10 +19,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -30,6 +32,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import java.io.InputStreamReader
+
+enum class WalkthroughShape {
+    Circle,
+    RoundedRect
+}
 
 @Serializable
 data class WalkthroughStep(
@@ -42,8 +51,10 @@ data class WalkthroughStep(
 
 data class TargetPosition(
     val offset: Offset,
-    val size: Size
+    val size: Size,
+    val shape: WalkthroughShape = WalkthroughShape.RoundedRect
 )
+
 
 data class WalkthroughConfig(
     val overlayColor: Color = Color.Black.copy(alpha = 0.7f),
@@ -53,6 +64,7 @@ data class WalkthroughConfig(
     val cardBackgroundColor: Color = Color.White,
     val cardElevation: Float = 8f,
     val animationDuration: Int = 300,
+    val shape: WalkthroughShape = WalkthroughShape.RoundedRect,
     val nextButtonText: String = "İleri",
     val previousButtonText: String = "Geri",
     val finishButtonText: String = "Tamam",
@@ -137,7 +149,8 @@ fun WalkthroughTarget(
     key: String,
     walkthroughState: WalkthroughState,
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
+    shape: WalkthroughShape = WalkthroughShape.RoundedRect,
+    content: @Composable () -> Unit,
 ) {
     Box(
         modifier = modifier.onGloballyPositioned { coordinates ->
@@ -146,12 +159,49 @@ fun WalkthroughTarget(
                 size = Size(
                     coordinates.size.width.toFloat(),
                     coordinates.size.height.toFloat()
-                )
+                ),
+                shape = shape
             )
             walkthroughState.updateTargetPosition(key, position)
         }
     ) {
         content()
+    }
+}
+
+fun DrawScope.drawHighlightShape(
+    highlightRect: Rect,
+    shape: WalkthroughShape,
+    overlayColor: Color,
+    highlightCornerRadius: Float
+) {
+    drawRect(
+        color = overlayColor,
+        size = size
+    )
+
+    when (shape) {
+        WalkthroughShape.Circle -> {
+            val center = highlightRect.center
+            val radius = minOf(highlightRect.width, highlightRect.height) / 2
+
+            drawCircle(
+                color = Color.Transparent,
+                radius = radius,
+                center = center,
+                blendMode = BlendMode.Clear
+            )
+        }
+
+        WalkthroughShape.RoundedRect -> {
+            drawRoundRect(
+                color = Color.Transparent,
+                topLeft = highlightRect.topLeft,
+                size = highlightRect.size,
+                cornerRadius = CornerRadius(highlightCornerRadius),
+                blendMode = BlendMode.Clear
+            )
+        }
     }
 }
 
@@ -165,6 +215,7 @@ fun WalkthroughOverlay(
     customCard: @Composable ((WalkthroughStep, Int, Int) -> Unit)? = null
 ) {
     val density = LocalDensity.current
+
     val animatedAlpha by animateFloatAsState(
         targetValue = if (walkthroughState.isVisible) 1f else 0f,
         animationSpec = tween(config.animationDuration),
@@ -195,11 +246,6 @@ fun WalkthroughOverlay(
                         }
                         .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
                 ) {
-                    drawRect(
-                        color = config.overlayColor,
-                        size = this.size
-                    )
-
                     targetPosition?.let { pos ->
                         val padding = config.highlightPadding
                         val highlightRect = Rect(
@@ -213,21 +259,27 @@ fun WalkthroughOverlay(
                             )
                         )
 
-                        drawRoundRect(
-                            color = Color.Transparent,
-                            topLeft = highlightRect.topLeft,
-                            size = highlightRect.size,
-                            cornerRadius = CornerRadius(config.highlightCornerRadius),
-                            blendMode = BlendMode.Clear
+                        drawHighlightShape(
+                            highlightRect = highlightRect,
+                            shape = pos.shape,
+                            overlayColor = config.overlayColor,
+                            highlightCornerRadius = config.highlightCornerRadius
+                        )
+                    } ?: run {
+                        drawRect(
+                            color = config.overlayColor,
+                            size = this.size
                         )
                     }
                 }
 
                 targetPosition?.let { pos ->
+                    var cardHeightPx by remember { mutableStateOf(250) } // fallback
                     val cardOffset = calculateCardPosition(
                         targetPosition = pos,
                         canvasSize = canvasSize.value,
-                        config = config
+                        config = config,
+                        cardHeight = cardHeightPx.toFloat()
                     )
 
                     if (customCard != null) {
@@ -244,7 +296,9 @@ fun WalkthroughOverlay(
                             )
                         }
                     } else {
-                        DefaultWalkthroughCard(
+
+
+                        MeasurableWalkthroughCard(
                             step = currentStep,
                             currentIndex = walkthroughState.currentStepIndex + 1,
                             totalSteps = walkthroughState.steps.size,
@@ -258,7 +312,8 @@ fun WalkthroughOverlay(
                             onFinish = {
                                 walkthroughState.finish()
                                 onFinish()
-                            }
+                            },
+                            onMeasured = { measured -> cardHeightPx = measured }
                         )
                     }
                 }
@@ -267,8 +322,57 @@ fun WalkthroughOverlay(
     }
 }
 
+private fun calculateCardPosition(
+    targetPosition: TargetPosition,
+    canvasSize: Size,
+    config: WalkthroughConfig,
+    cardHeight: Float
+): Offset {
+    val spacingFromHighlight = 32f
+    val screenMargin = 16f * 4f
+
+    if (canvasSize.width <= 0 || canvasSize.height <= 0) {
+        return Offset(screenMargin, screenMargin)
+    }
+
+    val highlightTop = targetPosition.offset.y - config.highlightPadding
+    val highlightBottom =
+        targetPosition.offset.y + targetPosition.size.height + config.highlightPadding
+    val highlightCenterY = (highlightTop + highlightBottom) / 2f
+    val canvasCenterY = canvasSize.height / 2f
+
+    val cardX = (canvasSize.width - config.cardMaxWidth) / 2f
+
+    val availableSpaceAbove = highlightTop - screenMargin
+    val availableSpaceBelow = canvasSize.height - highlightBottom - screenMargin
+    val totalRequiredSpace = cardHeight + spacingFromHighlight
+
+    val cardY = when {
+        highlightCenterY > canvasCenterY && availableSpaceAbove >= totalRequiredSpace -> {
+            highlightTop - cardHeight - spacingFromHighlight
+        }
+
+        highlightCenterY <= canvasCenterY && availableSpaceBelow >= totalRequiredSpace -> {
+            highlightBottom + spacingFromHighlight
+        }
+
+        availableSpaceAbove >= availableSpaceBelow -> {
+            maxOf(screenMargin, highlightTop - cardHeight - spacingFromHighlight)
+        }
+
+        else -> {
+            minOf(
+                highlightBottom + spacingFromHighlight,
+                canvasSize.height - cardHeight - screenMargin
+            )
+        }
+    }
+
+    return Offset(cardX, cardY)
+}
+
 @Composable
-private fun DefaultWalkthroughCard(
+private fun MeasurableWalkthroughCard(
     step: WalkthroughStep,
     currentIndex: Int,
     totalSteps: Int,
@@ -279,32 +383,39 @@ private fun DefaultWalkthroughCard(
     isLastStep: Boolean,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
-    onFinish: () -> Unit
+    onFinish: () -> Unit,
+    onMeasured: (Int) -> Unit
 ) {
     val density = LocalDensity.current
 
-    var cardHeight by remember { mutableStateOf(0f) }
-
     Card(
         modifier = Modifier
-            .offset(
-                y = with(density) { offset.y.toDp() }
-            )
+            .offset(y = with(density) { offset.y.toDp() })
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .widthIn(max = config.cardMaxWidth.dp),
+            .widthIn(max = config.cardMaxWidth.dp)
+            .onGloballyPositioned {
+                onMeasured(it.size.height)
+            },
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = config.cardElevation.dp),
         colors = CardDefaults.cardColors(containerColor = config.cardBackgroundColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "${step.title} ${config.stepCounterFormat.replace("{current}", currentIndex.toString()).replace("{total}", totalSteps.toString())}",
+                text = "${step.title} ${
+                    config.stepCounterFormat.replace(
+                        "{current}",
+                        currentIndex.toString()
+                    ).replace("{total}", totalSteps.toString())
+                }",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
             )
+
             Spacer(modifier = Modifier.height(8.dp))
+
             Text(
                 text = step.description,
                 fontSize = 14.sp,
@@ -323,8 +434,7 @@ private fun DefaultWalkthroughCard(
                     IconButton(onClick = onPrevious) {
                         Icon(
                             Icons.Default.ArrowBack,
-                            contentDescription = config.previousButtonText,
-                            tint = MaterialTheme.colorScheme.primary
+                            contentDescription = config.previousButtonText
                         )
                     }
                 } else {
@@ -333,19 +443,10 @@ private fun DefaultWalkthroughCard(
 
                 if (hasNext) {
                     IconButton(onClick = onNext) {
-                        Icon(
-                            Icons.Default.ArrowForward,
-                            contentDescription = config.nextButtonText,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        Icon(Icons.Default.ArrowForward, contentDescription = config.nextButtonText)
                     }
                 } else {
-                    TextButton(
-                        onClick = onFinish,
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
+                    TextButton(onClick = onFinish) {
                         Text(step.buttonText ?: config.finishButtonText)
                     }
                 }
@@ -354,79 +455,21 @@ private fun DefaultWalkthroughCard(
     }
 }
 
-private fun calculateCardPosition(
-    targetPosition: TargetPosition,
-    canvasSize: Size,
-    config: WalkthroughConfig
-): Offset {
-    val cardHeight = 250f
-    val screenMargin = 16f * 4f
-    val spacingFromHighlight = 32f
-
-    if (canvasSize.width <= 0 || canvasSize.height <= 0) {
-        return Offset(screenMargin, screenMargin)
-    }
-
-    // Highlight alanının gerçek sınırları
-    val highlightTop = targetPosition.offset.y - config.highlightPadding
-    val highlightBottom = targetPosition.offset.y + targetPosition.size.height + config.highlightPadding
-    val highlightCenterY = (highlightTop + highlightBottom) / 2f
-    val canvasCenterY = canvasSize.height / 2f
-
-    val cardX = (canvasSize.width - config.cardMaxWidth) / 2f
-
-    // Yukarıda ve aşağıda kullanılabilir alanları hesapla
-    val availableSpaceAbove = highlightTop - screenMargin
-    val availableSpaceBelow = canvasSize.height - highlightBottom - screenMargin
-    val totalRequiredSpace = cardHeight + spacingFromHighlight
-
-    // Debug log ekleyebilirsin
-    println("HighlightTop: $highlightTop, HighlightBottom: $highlightBottom")
-    println("AvailableSpaceAbove: $availableSpaceAbove, AvailableSpaceBelow: $availableSpaceBelow")
-    println("RequiredSpace: $totalRequiredSpace")
-
-    val cardY = when {
-        // Eğer highlight alt yarıda ve yukarıda yeterli yer varsa -> yukarı yerleştir
-        highlightCenterY > canvasCenterY && availableSpaceAbove >= totalRequiredSpace -> {
-            highlightTop - cardHeight - spacingFromHighlight
-        }
-        // Eğer highlight üst yarıda ve aşağıda yeterli yer varsa -> aşağı yerleştir
-        highlightCenterY <= canvasCenterY && availableSpaceBelow >= totalRequiredSpace -> {
-            highlightBottom + spacingFromHighlight
-        }
-        // Hangi tarafta daha fazla yer varsa oraya yerleştir
-        availableSpaceAbove >= availableSpaceBelow -> {
-            // Yukarıya yerleştir, ama minimum screenMargin bırak
-            maxOf(screenMargin, highlightTop - cardHeight - spacingFromHighlight)
-        }
-        else -> {
-            // Aşağıya yerleştir, ama ekran dışına taşma
-            minOf(
-                highlightBottom + spacingFromHighlight,
-                canvasSize.height - cardHeight - screenMargin
-            )
-        }
-    }
-
-    return Offset(cardX, cardY)
-}
-
-
 @Composable
 fun rememberWalkthroughStepsFromAssets(
     fileName: String,
     fallbackSteps: List<WalkthroughStep> = emptyList()
 ): List<WalkthroughStep> {
     var steps by remember { mutableStateOf(fallbackSteps) }
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     LaunchedEffect(fileName) {
         try {
             val inputStream = context.assets.open(fileName)
-            val jsonText = java.io.InputStreamReader(inputStream).readText()
-            steps = kotlinx.serialization.json.Json.decodeFromString<List<WalkthroughStep>>(jsonText)
+            val jsonText = InputStreamReader(inputStream).readText()
+            steps = Json.decodeFromString<List<WalkthroughStep>>(jsonText)
         } catch (e: Exception) {
-            // Fallback steps kullanılır
+            // Hata durumunda fallback steps kullanılır
             steps = fallbackSteps
         }
     }
@@ -441,6 +484,3 @@ fun WalkthroughState.startFrom(stepId: String) {
     }
 }
 
-fun WalkthroughState.addOnCompleteListener(onComplete: () -> Unit): WalkthroughState {
-    return this
-}
