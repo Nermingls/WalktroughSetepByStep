@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,7 +38,8 @@ import java.io.InputStreamReader
 
 enum class WalkthroughShape {
     Circle,
-    RoundedRect
+    RoundedRect,
+    Oval
 }
 
 @Serializable
@@ -55,13 +57,14 @@ data class TargetPosition(
     val shape: WalkthroughShape = WalkthroughShape.RoundedRect
 )
 
-
+@Immutable
 data class WalkthroughConfig(
     val overlayColor: Color = Color.Black.copy(alpha = 0.7f),
     val highlightPadding: Float = 16f,
     val highlightCornerRadius: Float = 12f,
     val cardMaxWidth: Float = 280f,
     val cardBackgroundColor: Color = Color.White,
+    val cardTextColor: Color = Color.Black,
     val cardElevation: Float = 8f,
     val animationDuration: Int = 300,
     val shape: WalkthroughShape = WalkthroughShape.RoundedRect,
@@ -81,6 +84,7 @@ fun rememberWalkthroughState(
     }
 }
 
+@Stable
 class WalkthroughState(
     internal val steps: List<WalkthroughStep>,
     autoStart: Boolean = false
@@ -202,6 +206,16 @@ fun DrawScope.drawHighlightShape(
                 blendMode = BlendMode.Clear
             )
         }
+
+
+        WalkthroughShape.Oval -> {
+            drawOval(
+                color = Color.Transparent,
+                topLeft = highlightRect.topLeft,
+                size = highlightRect.size,
+                blendMode = BlendMode.Clear
+            )
+        }
     }
 }
 
@@ -274,7 +288,7 @@ fun WalkthroughOverlay(
                 }
 
                 targetPosition?.let { pos ->
-                    var cardHeightPx by remember { mutableStateOf(250) } // fallback
+                    var cardHeightPx by remember { mutableIntStateOf(250) } // fallback
                     val cardOffset = calculateCardPosition(
                         targetPosition = pos,
                         canvasSize = canvasSize.value,
@@ -310,6 +324,10 @@ fun WalkthroughOverlay(
                             onNext = walkthroughState::next,
                             onPrevious = walkthroughState::previous,
                             onFinish = {
+                                walkthroughState.finish()
+                                onFinish()
+                            },
+                            onCancelWalcktrough = {
                                 walkthroughState.finish()
                                 onFinish()
                             },
@@ -384,6 +402,7 @@ private fun MeasurableWalkthroughCard(
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onFinish: () -> Unit,
+    onCancelWalcktrough: () -> Unit,
     onMeasured: (Int) -> Unit
 ) {
     val density = LocalDensity.current
@@ -402,17 +421,33 @@ private fun MeasurableWalkthroughCard(
         colors = CardDefaults.cardColors(containerColor = config.cardBackgroundColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "${step.title} ${
-                    config.stepCounterFormat.replace(
-                        "{current}",
-                        currentIndex.toString()
-                    ).replace("{total}", totalSteps.toString())
-                }",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Text(
+                    text = "${step.title} ${
+                        config.stepCounterFormat.replace(
+                            "{current}",
+                            currentIndex.toString()
+                        ).replace("{total}", totalSteps.toString())
+                    }",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+
+
+                IconButton(onClick = onCancelWalcktrough) {
+                    Icon(
+                        Icons.Default.Clear,
+                        contentDescription = "cancel Walkthrough"
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -447,7 +482,10 @@ private fun MeasurableWalkthroughCard(
                     }
                 } else {
                     TextButton(onClick = onFinish) {
-                        Text(step.buttonText ?: config.finishButtonText)
+                        Text(
+                            step.buttonText ?: config.finishButtonText,
+                            color = config.cardTextColor
+                        )
                     }
                 }
             }
@@ -469,18 +507,18 @@ fun rememberWalkthroughStepsFromAssets(
             val jsonText = InputStreamReader(inputStream).readText()
             steps = Json.decodeFromString<List<WalkthroughStep>>(jsonText)
         } catch (e: Exception) {
-            // Hata durumunda fallback steps kullanılır
+            println("Error reading walkthrough steps: ${e.message}")
             steps = fallbackSteps
         }
     }
     return steps
 }
 
-fun WalkthroughState.startFrom(stepId: String) {
-    val index = steps.indexOfFirst { it.id == stepId }
-    if (index != -1) {
-        currentStepIndex = index
-        isVisible = true
-    }
-}
-
+//fun WalkthroughState.startFrom(stepId: String) {
+//    val index = steps.indexOfFirst { it.id == stepId }
+//    if (index != -1) {
+//        currentStepIndex = index
+//        isVisible = true
+//    }
+//}
+//

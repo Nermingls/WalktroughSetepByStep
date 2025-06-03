@@ -47,7 +47,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nermingules.walktroughsetepbystep.WalkthroughTarget
 import com.nermingules.walktroughsetepbystep.ui.theme.HalkBankBlue
 import com.nermingules.walktroughsetepbystep.ui.theme.RoofDarkGrayBlue
 import com.nermingules.walktroughsetepbystep.ui.theme.RoofOrange
@@ -55,17 +54,22 @@ import com.nermingules.walktroughsetepbystep.ui.theme.RoofOrange
 
 @Composable
 fun BottomNavigation(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onStartWalkthrough: () -> Unit,
+    walkthroughState: WalkthroughState,
 ) {
+
     Box(modifier = modifier) {
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(80.dp),
             shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp) // Daha yüksek elevation
+            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
         ) {
+
             Row(
                 modifier = Modifier
                     .fillMaxSize()
@@ -74,12 +78,13 @@ fun BottomNavigation(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 BottomNavItem(painterResource(R.drawable.ic_home), "Ana Sayfa", true)
-                BottomNavItem(painterResource(R.drawable.ic_wallet), "Hesap/Kart", false)
+                BottomNavItem(painterResource(R.drawable.ic_receipt), "Hesap/Kart", false)
                 Spacer(modifier = Modifier.width(70.dp))
                 BottomNavItem(painterResource(R.drawable.ic_plus_circle), "Başvuru", false)
                 BottomNavItem(painterResource(R.drawable.ic_balace), "Varlıklar", false)
             }
         }
+
         Box(
             modifier = Modifier
                 .size(70.dp)
@@ -88,10 +93,19 @@ fun BottomNavigation(
                 .shadow(elevation = 16.dp, shape = CircleShape)
                 .clip(CircleShape)
                 .background(RoofOrange)
-                .border(4.dp, Color.White, CircleShape),
+                .border(4.dp, Color.White, CircleShape)
+                .clickable { onStartWalkthrough() },
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            WalkthroughTarget(
+                key = "bottomCard",
+                walkthroughState = walkthroughState,
+                modifier = Modifier,
+                shape = WalkthroughShape.Circle,
+                content = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_options),
                     contentDescription = "İşlemler",
@@ -104,7 +118,7 @@ fun BottomNavigation(
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-            }
+            }})
         }
     }
 }
@@ -118,13 +132,13 @@ fun TabItem(text: String, isSelected: Boolean, onClick: () -> Unit) {
         Text(
             text = text,
             color = if (isSelected) Color.White else Color.White.copy(alpha = 0.8f),
-            fontSize = 14.sp,
+            fontSize = 16.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
         )
         if (isSelected) {
             Box(
                 modifier = Modifier
-                    .width(40.dp)
+                    .width(90.dp)
                     .height(2.dp)
                     .background(Color.White)
                     .padding(top = 4.dp)
@@ -145,7 +159,7 @@ fun ActionButton(
     ) {
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(48.dp)
                 .clip(CircleShape)
                 .then(
                     if (backgroundBrush != null) {
@@ -160,13 +174,13 @@ fun ActionButton(
                 painter = icon,
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(24.dp)
             )
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = title,
-            fontSize = 10.sp,
+            fontSize = 12.sp,
             color = Color.Black,
             textAlign = TextAlign.Center,
             lineHeight = 12.sp
@@ -256,7 +270,6 @@ fun BottomNavItem(icon: Painter, label: String, isSelected: Boolean) {
 @Composable
 fun TopAppBar(
     walkthroughState: WalkthroughState,
-    onStartWalkthrough: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
 
@@ -330,24 +343,12 @@ fun TopAppBar(
 
                 Spacer(modifier = Modifier.width(8.dp))
                 if (!walkthroughState.isVisible) {
-                    Button(
-                        onClick = onStartWalkthrough,
-                        modifier = Modifier
-                            .height(60.dp)
-                            .aspectRatio(1.5f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White.copy(alpha = 0.1f),
-                            contentColor = RoofDarkGrayBlue
-                        )
-                    ) {
-                        Text("Başlat")
-                    }
                 }
             }
             WalkthroughTarget(
                 key = "search",
                 walkthroughState = walkthroughState,
-                modifier = Modifier,
+                modifier = Modifier.padding(horizontal = 16.dp),
                 shape = WalkthroughShape.Circle,
                 content = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -359,13 +360,15 @@ fun TopAppBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+                .padding(
+                    start = 16.dp,
+                    bottom = 40.dp,
+                ),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             TabItem("Hesaplarım", selectedTab == 0) { selectedTab = 0 }
             TabItem("Kartlarım", selectedTab == 1) { selectedTab = 1 }
             TabItem("Yatırımlarım", selectedTab == 2) { selectedTab = 2 }
         }
-
     }
 }
