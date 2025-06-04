@@ -30,6 +30,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,10 +39,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -58,67 +66,135 @@ fun BottomNavigation(
     onStartWalkthrough: () -> Unit,
     walkthroughState: WalkthroughState,
 ) {
+    var bottomNavBounds by remember { mutableStateOf<Rect?>(null) }
+    var bottomNavFABBounds by remember { mutableStateOf<Rect?>(null) }
 
-    Box(modifier = modifier) {
+    val updateTargetPositions = remember {
+        {
+            if (bottomNavBounds != null && bottomNavFABBounds != null) {
+                walkthroughState.clearTargetPositions("bottomCard")
 
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(80.dp),
-            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
-        ) {
+                bottomNavBounds?.let { bounds ->
+                    walkthroughState.addTargetPosition(
+                        "bottomCard",
+                        TargetPosition(
+                            offset = bounds.topLeft,
+                            size = bounds.size,
+                            shape = WalkthroughShape.RoundedRect
+                        )
+                    )
+                }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BottomNavItem(painterResource(R.drawable.ic_home), "Ana Sayfa", true)
-                BottomNavItem(painterResource(R.drawable.ic_receipt), "Hesap/Kart", false)
-                Spacer(modifier = Modifier.width(70.dp))
-                BottomNavItem(painterResource(R.drawable.ic_plus_circle), "Başvuru", false)
-                BottomNavItem(painterResource(R.drawable.ic_balace), "Varlıklar", false)
+                bottomNavFABBounds?.let { fabBounds ->
+                    walkthroughState.addTargetPosition(
+                        "bottomCard",
+                        TargetPosition(
+                            offset = fabBounds.topLeft,
+                            size = fabBounds.size,
+                            shape = WalkthroughShape.Circle
+                        )
+                    )
+                }
             }
         }
+    }
 
-        Box(
+    LaunchedEffect(bottomNavBounds, bottomNavFABBounds) {
+        updateTargetPositions()
+    }
+
+    Box(
+        modifier = modifier
+            .onGloballyPositioned { coordinates ->
+                bottomNavBounds = Rect(
+                    offset = coordinates.positionInRoot(),
+                    size = Size(
+                        width = coordinates.size.width.toFloat(),
+                        height = coordinates.size.height.toFloat()
+                    )
+                )
+            }
+    ) {
+        BottomNavigationCard()
+
+        FloatingActionButton(
+            modifier = Modifier.align(Alignment.TopCenter),
+            onStartWalkthrough = onStartWalkthrough,
+            onPositioned = { bounds ->
+                bottomNavFABBounds = bounds
+            }
+        )
+    }
+}
+
+@Composable
+private fun BottomNavigationCard() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+    ) {
+        Row(
             modifier = Modifier
-                .size(70.dp)
-                .align(Alignment.TopCenter)
-                .offset(y = (-25).dp)
-                .shadow(elevation = 16.dp, shape = CircleShape)
-                .clip(CircleShape)
-                .background(RoofOrange)
-                .border(4.dp, Color.White, CircleShape)
-                .clickable { onStartWalkthrough() },
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            WalkthroughTarget(
-                key = "bottomCard",
-                walkthroughState = walkthroughState,
-                modifier = Modifier,
-                shape = WalkthroughShape.Circle,
-                content = {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_options),
-                    contentDescription = "İşlemler",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+            BottomNavItem(painterResource(R.drawable.ic_home), "Ana Sayfa", true)
+            BottomNavItem(painterResource(R.drawable.ic_receipt), "Hesap/Kart", false)
+            Spacer(modifier = Modifier.width(70.dp))
+            BottomNavItem(painterResource(R.drawable.ic_plus_circle), "Başvuru", false)
+            BottomNavItem(painterResource(R.drawable.ic_balace), "Varlıklar", false)
+        }
+    }
+}
+
+@Composable
+private fun FloatingActionButton(
+    modifier: Modifier = Modifier,
+    onStartWalkthrough: () -> Unit,
+    onPositioned: (Rect) -> Unit
+) {
+    Box(
+        modifier = modifier
+            .size(70.dp)
+            .offset(y = (-25).dp)
+            .shadow(elevation = 16.dp, shape = CircleShape)
+            .clip(CircleShape)
+            .background(RoofOrange)
+            .border(4.dp, Color.White, CircleShape)
+            .onGloballyPositioned { coordinates ->
+                onPositioned(
+                    Rect(
+                        offset = coordinates.positionInRoot(),
+                        size = Size(
+                            coordinates.size.width.toFloat(),
+                            coordinates.size.height.toFloat()
+                        )
+                    )
                 )
-                Text(
-                    text = "İşlemler",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }})
+            }
+            .clickable { onStartWalkthrough() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_options),
+                contentDescription = "İşlemler",
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+            Text(
+                text = "İşlemler",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
         }
     }
 }
@@ -154,12 +230,12 @@ fun ActionButton(
     backgroundBrush: Brush? = null,
     backgroundColor: Color? = null
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Row(
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(36.dp)
                 .clip(CircleShape)
                 .then(
                     if (backgroundBrush != null) {
@@ -174,16 +250,20 @@ fun ActionButton(
                 painter = icon,
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier
+                    .size(24.dp)
+                    .padding(4.dp)
             )
         }
-        Spacer(modifier = Modifier.height(4.dp))
+
+        Spacer(modifier = Modifier.width(6.dp))
+
         Text(
             text = title,
             fontSize = 12.sp,
             color = Color.Black,
-            textAlign = TextAlign.Center,
-            lineHeight = 12.sp
+            fontWeight = FontWeight.SemiBold,
+            lineHeight = 14.sp
         )
     }
 }
@@ -198,7 +278,7 @@ fun PromotionCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(75.dp),
+            .height(60.dp),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
@@ -206,7 +286,7 @@ fun PromotionCard(
             modifier = Modifier
                 .fillMaxSize()
                 .background(gradient)
-                .padding(16.dp)
+                .padding(horizontal = 12.dp) // biraz azaltıldı
         ) {
             Row(
                 modifier = Modifier.fillMaxSize(),
@@ -217,23 +297,23 @@ fun PromotionCard(
                     painter = painterResource(id = imageId),
                     contentDescription = "Image",
                     modifier = Modifier
-                        .height(50.dp)
+                        .height(40.dp)
                         .aspectRatio(1f)
-                        .padding(end = 8.dp),
+                        .padding(end = 6.dp),
                     contentScale = ContentScale.Crop
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = title,
                         color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
                     )
                     if (subtitle.isNotEmpty()) {
                         Text(
                             text = subtitle,
                             color = Color.White.copy(alpha = 0.9f),
-                            fontSize = 12.sp
+                            fontSize = 10.sp
                         )
                     }
                 }
@@ -290,7 +370,7 @@ fun TopAppBar(
                 .fillMaxWidth()
                 .padding(
                     start = 16.dp,
-                    top = 32.dp,
+                    top = 24.dp,
                     bottom = 16.dp,
                 ),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -305,7 +385,7 @@ fun TopAppBar(
                     content = {
                         Box(
                             modifier = Modifier
-                                .size(60.dp)
+                                .size(70.dp)
                         ) {
                             Image(
                                 painter = painterResource(id = R.drawable.user_profile),
@@ -327,6 +407,19 @@ fun TopAppBar(
                                         Color.Gray.copy(alpha = 0.2f),
                                         CircleShape
                                     )
+                                    .onGloballyPositioned { coordinates ->
+                                        val position = coordinates.positionInRoot()
+                                        val size = coordinates.size
+
+                                        walkthroughState.addTargetPosition(
+                                            "profile",
+                                            TargetPosition(
+                                                offset = position,
+                                                size = Size(size.width.toFloat(), size.height.toFloat()),
+                                                shape = WalkthroughShape.Circle
+                                            )
+                                        )
+                                    }
                                     .clickable { },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -352,7 +445,7 @@ fun TopAppBar(
                 shape = WalkthroughShape.Circle,
                 content = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = Color.White)
+                        Icon(Icons.Default.Search, contentDescription = null, tint = Color.White, modifier = Modifier. padding(8.dp))
                     }
                 })
         }

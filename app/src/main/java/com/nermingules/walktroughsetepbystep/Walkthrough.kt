@@ -3,6 +3,8 @@ package com.nermingules.walktroughsetepbystep
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
@@ -42,6 +45,18 @@ enum class WalkthroughShape {
     Oval
 }
 
+enum class CustomTargetPosition {
+    TOP_LEFT,
+    TOP_CENTER,
+    TOP_RIGHT,
+    CENTER_LEFT,
+    CENTER,
+    CENTER_RIGHT,
+    BOTTOM_LEFT,
+    BOTTOM_CENTER,
+    BOTTOM_RIGHT
+}
+
 @Serializable
 data class WalkthroughStep(
     val id: String,
@@ -57,10 +72,14 @@ data class TargetPosition(
     val shape: WalkthroughShape = WalkthroughShape.RoundedRect
 )
 
+data class TargetInfo(
+    val bounds: Rect
+)
+
 @Immutable
 data class WalkthroughConfig(
     val overlayColor: Color = Color.Black.copy(alpha = 0.7f),
-    val highlightPadding: Float = 16f,
+    val highlightPadding: Float = 0f,
     val highlightCornerRadius: Float = 12f,
     val cardMaxWidth: Float = 280f,
     val cardBackgroundColor: Color = Color.White,
@@ -71,7 +90,7 @@ data class WalkthroughConfig(
     val nextButtonText: String = "İleri",
     val previousButtonText: String = "Geri",
     val finishButtonText: String = "Tamam",
-    val stepCounterFormat: String = "({current}/{total})"
+    val stepCounterFormat: String = "({current}/{total})",
 )
 
 @Composable
@@ -95,7 +114,10 @@ class WalkthroughState(
     var currentStepIndex by mutableIntStateOf(0)
         internal set
 
-    var targetPositions by mutableStateOf<Map<String, TargetPosition>>(emptyMap())
+    var targetPositions by mutableStateOf<Map<String, List<TargetPosition>>>(emptyMap())
+        internal set
+
+    var customTargets by mutableStateOf<MutableMap<String, TargetInfo>>(mutableMapOf())
         internal set
 
     val currentStep: WalkthroughStep?
@@ -131,6 +153,7 @@ class WalkthroughState(
         isVisible = false
         currentStepIndex = 0
         targetPositions = emptyMap()
+        customTargets = mutableMapOf()
     }
 
     fun skip() {
@@ -144,7 +167,69 @@ class WalkthroughState(
     }
 
     internal fun updateTargetPosition(key: String, position: TargetPosition) {
-        targetPositions = targetPositions + (key to position)
+        val existingPositions = targetPositions[key] ?: emptyList()
+        targetPositions = targetPositions + (key to existingPositions + position)
+    }
+
+    internal fun addTargetPosition(key: String, position: TargetPosition) {
+        val existingPositions = targetPositions[key] ?: emptyList()
+        targetPositions = targetPositions + (key to existingPositions + position)
+    }
+
+    internal fun clearTargetPositions(key: String) {
+        targetPositions = targetPositions - key
+    }
+
+    fun setCustomTargetPosition(
+        key: String,
+        x: Float,
+        y: Float,
+        width: Float,
+        height: Float,
+        shape: WalkthroughShape = WalkthroughShape.RoundedRect
+    ) {
+        val customPosition = TargetPosition(
+            offset = Offset(x, y),
+            size = Size(width, height),
+            shape = shape
+        )
+        addTargetPosition(key, customPosition)
+    }
+
+    fun setCustomTargetPosition(
+        key: String,
+        position: CustomTargetPosition,
+        width: Float = 100f,
+        height: Float = 100f,
+        screenWidth: Float,
+        screenHeight: Float,
+        shape: WalkthroughShape = WalkthroughShape.RoundedRect
+    ) {
+        val (x, y) = when (position) {
+            CustomTargetPosition.TOP_LEFT -> Pair(16f, 16f)
+            CustomTargetPosition.TOP_CENTER -> Pair((screenWidth - width) / 2f, 16f)
+            CustomTargetPosition.TOP_RIGHT -> Pair(screenWidth - width - 16f, 16f)
+            CustomTargetPosition.CENTER_LEFT -> Pair(16f, (screenHeight - height) / 2f)
+            CustomTargetPosition.CENTER -> Pair((screenWidth - width) / 2f, (screenHeight - height) / 2f)
+            CustomTargetPosition.CENTER_RIGHT -> Pair(screenWidth - width - 16f, (screenHeight - height) / 2f)
+            CustomTargetPosition.BOTTOM_LEFT -> Pair(16f, screenHeight - height - 16f)
+            CustomTargetPosition.BOTTOM_CENTER -> Pair((screenWidth - width) / 2f, screenHeight - height - 16f)
+            CustomTargetPosition.BOTTOM_RIGHT -> Pair(screenWidth - width - 16f, screenHeight - height - 16f)
+        }
+
+        customTargets[key] = TargetInfo(
+            bounds = androidx.compose.ui.geometry.Rect(
+                offset = Offset(x, y),
+                size = Size(width, height)
+            )
+        )
+
+        val customPosition = TargetPosition(
+            offset = Offset(x, y),
+            size = Size(width, height),
+            shape = shape
+        )
+        addTargetPosition(key, customPosition)
     }
 }
 
@@ -173,48 +258,76 @@ fun WalkthroughTarget(
     }
 }
 
-fun DrawScope.drawHighlightShape(
-    highlightRect: Rect,
-    shape: WalkthroughShape,
+@Composable
+fun WalkthroughCustomHighlight(
+    walkthroughState: WalkthroughState,
+    config: WalkthroughConfig = WalkthroughConfig(),
+    modifier: Modifier = Modifier,
+    onStepChange: (WalkthroughStep) -> Unit = {},
+    onFinish: () -> Unit = {},
+    customCard: @Composable ((WalkthroughStep, Int, Int) -> Unit)? = null,
+    customPositions: Map<String, TargetPosition> = emptyMap()
+) {
+    LaunchedEffect(customPositions) {
+        customPositions.forEach { (key, position) ->
+            walkthroughState.updateTargetPosition(key, position)
+        }
+    }
+
+    WalkthroughOverlay(
+        walkthroughState = walkthroughState,
+        config = config,
+        modifier = modifier,
+        onStepChange = onStepChange,
+        onFinish = onFinish,
+        customCard = customCard
+    )
+}
+
+fun DrawScope.drawMultipleHighlights(
+    highlightRects: List<Pair<Rect, WalkthroughShape>>,
     overlayColor: Color,
     highlightCornerRadius: Float
 ) {
+    // Önce overlay'i çiz
     drawRect(
         color = overlayColor,
         size = size
     )
 
-    when (shape) {
-        WalkthroughShape.Circle -> {
-            val center = highlightRect.center
-            val radius = minOf(highlightRect.width, highlightRect.height) / 2
+    // Her bir highlight için hole açılacak
+    highlightRects.forEach { (highlightRect, shape) ->
+        when (shape) {
+            WalkthroughShape.Circle -> {
+                val center = highlightRect.center
+                val radius = minOf(highlightRect.width, highlightRect.height) / 2
 
-            drawCircle(
-                color = Color.Transparent,
-                radius = radius,
-                center = center,
-                blendMode = BlendMode.Clear
-            )
-        }
+                drawCircle(
+                    color = Color.Transparent,
+                    radius = radius,
+                    center = center,
+                    blendMode = BlendMode.Clear
+                )
+            }
 
-        WalkthroughShape.RoundedRect -> {
-            drawRoundRect(
-                color = Color.Transparent,
-                topLeft = highlightRect.topLeft,
-                size = highlightRect.size,
-                cornerRadius = CornerRadius(highlightCornerRadius),
-                blendMode = BlendMode.Clear
-            )
-        }
+            WalkthroughShape.RoundedRect -> {
+                drawRoundRect(
+                    color = Color.Transparent,
+                    topLeft = highlightRect.topLeft,
+                    size = highlightRect.size,
+                    cornerRadius = CornerRadius(highlightCornerRadius),
+                    blendMode = BlendMode.Clear
+                )
+            }
 
-
-        WalkthroughShape.Oval -> {
-            drawOval(
-                color = Color.Transparent,
-                topLeft = highlightRect.topLeft,
-                size = highlightRect.size,
-                blendMode = BlendMode.Clear
-            )
+            WalkthroughShape.Oval -> {
+                drawOval(
+                    color = Color.Transparent,
+                    topLeft = highlightRect.topLeft,
+                    size = highlightRect.size,
+                    blendMode = BlendMode.Clear
+                )
+            }
         }
     }
 }
@@ -244,13 +357,33 @@ fun WalkthroughOverlay(
                 onStepChange(currentStep)
             }
 
-            val targetPosition = walkthroughState.targetPositions[currentStep.targetKey]
+            val targetPositions = walkthroughState.targetPositions[currentStep.targetKey] ?: emptyList()
 
             Box(
                 modifier = modifier
                     .fillMaxSize()
                     .zIndex(1000f)
                     .graphicsLayer(alpha = animatedAlpha)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = {}
+                        )
+                    }
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { },
+                            onDragEnd = { },
+                            onDrag = { _, _ -> }
+                        )
+                    }
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                event.changes.forEach { it.consume() }
+                            }
+                        }
+                    }
             ) {
                 Canvas(
                     modifier = Modifier
@@ -260,26 +393,28 @@ fun WalkthroughOverlay(
                         }
                         .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
                 ) {
-                    targetPosition?.let { pos ->
+                    if (targetPositions.isNotEmpty()) {
                         val padding = config.highlightPadding
-                        val highlightRect = Rect(
-                            offset = Offset(
-                                pos.offset.x - padding,
-                                pos.offset.y - padding
-                            ),
-                            size = Size(
-                                pos.size.width + padding * 2,
-                                pos.size.height + padding * 2
+                        val highlightRects = targetPositions.map { pos ->
+                            val highlightRect = Rect(
+                                offset = Offset(
+                                    pos.offset.x - padding,
+                                    pos.offset.y - padding
+                                ),
+                                size = Size(
+                                    pos.size.width + padding * 2,
+                                    pos.size.height + padding * 2
+                                )
                             )
-                        )
+                            highlightRect to pos.shape
+                        }
 
-                        drawHighlightShape(
-                            highlightRect = highlightRect,
-                            shape = pos.shape,
+                        drawMultipleHighlights(
+                            highlightRects = highlightRects,
                             overlayColor = config.overlayColor,
                             highlightCornerRadius = config.highlightCornerRadius
                         )
-                    } ?: run {
+                    } else {
                         drawRect(
                             color = config.overlayColor,
                             size = this.size
@@ -287,10 +422,11 @@ fun WalkthroughOverlay(
                     }
                 }
 
-                targetPosition?.let { pos ->
-                    var cardHeightPx by remember { mutableIntStateOf(250) } // fallback
+                // Çoklu target position için card konumunu hesapla
+                if (targetPositions.isNotEmpty()) {
+                    var cardHeightPx by remember { mutableIntStateOf(250) }
                     val cardOffset = calculateCardPosition(
-                        targetPosition = pos,
+                        targetPositions = targetPositions,
                         canvasSize = canvasSize.value,
                         config = config,
                         cardHeight = cardHeightPx.toFloat()
@@ -310,8 +446,6 @@ fun WalkthroughOverlay(
                             )
                         }
                     } else {
-
-
                         MeasurableWalkthroughCard(
                             step = currentStep,
                             currentIndex = walkthroughState.currentStepIndex + 1,
@@ -327,7 +461,7 @@ fun WalkthroughOverlay(
                                 walkthroughState.finish()
                                 onFinish()
                             },
-                            onCancelWalcktrough = {
+                            onCancelWalkthrough = {
                                 walkthroughState.finish()
                                 onFinish()
                             },
@@ -340,8 +474,9 @@ fun WalkthroughOverlay(
     }
 }
 
+
 private fun calculateCardPosition(
-    targetPosition: TargetPosition,
+    targetPositions: List<TargetPosition>,
     canvasSize: Size,
     config: WalkthroughConfig,
     cardHeight: Float
@@ -349,38 +484,61 @@ private fun calculateCardPosition(
     val spacingFromHighlight = 32f
     val screenMargin = 16f * 4f
 
-    if (canvasSize.width <= 0 || canvasSize.height <= 0) {
+    if (canvasSize.width <= 0 || canvasSize.height <= 0 || targetPositions.isEmpty()) {
         return Offset(screenMargin, screenMargin)
     }
 
-    val highlightTop = targetPosition.offset.y - config.highlightPadding
-    val highlightBottom =
-        targetPosition.offset.y + targetPosition.size.height + config.highlightPadding
-    val highlightCenterY = (highlightTop + highlightBottom) / 2f
-    val canvasCenterY = canvasSize.height / 2f
-
     val cardX = (canvasSize.width - config.cardMaxWidth) / 2f
 
-    val availableSpaceAbove = highlightTop - screenMargin
-    val availableSpaceBelow = canvasSize.height - highlightBottom - screenMargin
+    // Tüm hole'ların bounds'unu hesapla
+    val allBounds = targetPositions.map { pos ->
+        Rect(
+            offset = Offset(
+                pos.offset.x - config.highlightPadding,
+                pos.offset.y - config.highlightPadding
+            ),
+            size = Size(
+                pos.size.width + config.highlightPadding * 2,
+                pos.size.height + config.highlightPadding * 2
+            )
+        )
+    }.sortedBy { it.top }
+
+    val topMost = allBounds.first().top
+    val bottomMost = allBounds.last().bottom
+
+    val availableSpaceAbove = topMost - screenMargin
+    val availableSpaceBelow = canvasSize.height - bottomMost - screenMargin
     val totalRequiredSpace = cardHeight + spacingFromHighlight
 
+    // Önce hole'ların arasında yer var mı kontrol et
+    if (allBounds.size >= 2) {
+        for (i in 0 until allBounds.size - 1) {
+            val currentBottom = allBounds[i].bottom
+            val nextTop = allBounds[i + 1].top
+            val gapSize = nextTop - currentBottom
+
+            if (gapSize >= totalRequiredSpace) {
+                // Arada yeterli yer var, buraya yerleştir
+                return Offset(cardX, currentBottom + spacingFromHighlight / 2)
+            }
+        }
+    }
+
+    // Arada yer yoksa üst/alt seçeneklerini değerlendir
     val cardY = when {
-        highlightCenterY > canvasCenterY && availableSpaceAbove >= totalRequiredSpace -> {
-            highlightTop - cardHeight - spacingFromHighlight
+        availableSpaceAbove >= totalRequiredSpace -> {
+            topMost - cardHeight - spacingFromHighlight
         }
-
-        highlightCenterY <= canvasCenterY && availableSpaceBelow >= totalRequiredSpace -> {
-            highlightBottom + spacingFromHighlight
+        availableSpaceBelow >= totalRequiredSpace -> {
+            bottomMost + spacingFromHighlight
         }
-
         availableSpaceAbove >= availableSpaceBelow -> {
-            maxOf(screenMargin, highlightTop - cardHeight - spacingFromHighlight)
+            maxOf(screenMargin, topMost - cardHeight - spacingFromHighlight)
         }
-
         else -> {
             minOf(
-                highlightBottom + spacingFromHighlight,
+                bottomMost + spacingFromHighlight,
                 canvasSize.height - cardHeight - screenMargin
             )
         }
@@ -402,7 +560,7 @@ private fun MeasurableWalkthroughCard(
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onFinish: () -> Unit,
-    onCancelWalcktrough: () -> Unit,
+    onCancelWalkthrough: () -> Unit,
     onMeasured: (Int) -> Unit
 ) {
     val density = LocalDensity.current
@@ -422,12 +580,10 @@ private fun MeasurableWalkthroughCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
                 Text(
                     text = "${step.title} ${
                         config.stepCounterFormat.replace(
@@ -440,11 +596,10 @@ private fun MeasurableWalkthroughCard(
                     color = Color.Black
                 )
 
-
-                IconButton(onClick = onCancelWalcktrough) {
+                IconButton(onClick = onCancelWalkthrough) {
                     Icon(
                         Icons.Default.Clear,
-                        contentDescription = "cancel Walkthrough"
+                        contentDescription = "Cancel Walkthrough"
                     )
                 }
             }
@@ -513,12 +668,3 @@ fun rememberWalkthroughStepsFromAssets(
     }
     return steps
 }
-
-//fun WalkthroughState.startFrom(stepId: String) {
-//    val index = steps.indexOfFirst { it.id == stepId }
-//    if (index != -1) {
-//        currentStepIndex = index
-//        isVisible = true
-//    }
-//}
-//

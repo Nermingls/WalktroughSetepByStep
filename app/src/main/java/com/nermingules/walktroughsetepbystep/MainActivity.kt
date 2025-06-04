@@ -71,8 +71,8 @@ fun WalktroughSetepByStepApp() {
             ),
             WalkthroughStep(
                 id = "step_bottom",
-                title = "Kampanyalar",
-                description = "Size Özel Kampanyalar ",
+                title = "Bottom",
+                description = "BottomBar ",
                 targetKey = "bottomCard"
             ),
             WalkthroughStep(
@@ -92,11 +92,10 @@ fun WalktroughSetepByStepApp() {
 
     val customConfig = WalkthroughConfig(
         overlayColor = WalktroughBlue.copy(alpha = 0.8f),
-        highlightPadding = 20f,
         nextButtonText = "İleri",
         previousButtonText = "Geri",
         finishButtonText = "Anladım!",
-        stepCounterFormat = "({current}/{total})"
+        stepCounterFormat = "({current}/{total})",
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -178,8 +177,8 @@ fun BankHomeScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(end = 16.dp, start = 16.dp),
-                shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
                 WalkthroughTarget(
@@ -188,7 +187,7 @@ fun BankHomeScreen(
                     modifier = Modifier,
                     content = {
                         Column(
-                            modifier = Modifier.padding(20.dp)
+                            modifier = Modifier.padding(16.dp)
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -202,80 +201,92 @@ fun BankHomeScreen(
                                         tint = RoofOrange,
                                         modifier = Modifier.size(24.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = "Vadesiz TL Hesabı",
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold,
                                         color = Color.Black
                                     )
                                 }
 
-                                Row {
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    OutlinedButton(
-                                        onClick = { },
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            contentColor = RoofOrange
-                                        ),
-                                        border = BorderStroke(
-                                            1.dp, RoofOrange
-                                        ),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Text("Tümü", fontSize = 14.sp)
-                                    }
+                                OutlinedButton(
+                                    onClick = { },
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = RoofOrange
+                                    ),
+                                    border = BorderStroke(1.dp, RoofOrange),
+                                    shape = RoundedCornerShape(6.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Text("Tümü", fontSize = 12.sp)
                                 }
                             }
 
-                            Text(
-                                text = "752 - 01075579",
-                                color = Color.Gray,
-                                fontSize = 14.sp
-                            )
+                            Column(modifier = Modifier.padding(horizontal = 2.dp) ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ){
+                                    Text(
+                                        text = "752 - 01075579",
+                                        color = Color.Gray,
+                                        fontSize = 12.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Icon(
+                                        painter =painterResource(R.drawable.ic_share),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
 
-                            Spacer(modifier = Modifier.height(8.dp))
 
-                            Text(
-                                text = "Kullanılabilir Bakiye",
-                                color = Color.Gray,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = "200,00 TL",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black.copy(alpha = 0.8f)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
                                 Text(
-                                    text = "Kullanılabilir Kredili Bakiye",
+                                    text = "Kullanılabilir Bakiye",
                                     color = Color.Gray,
-                                    fontSize = 14.sp,
-                                    modifier = Modifier.padding(end = 8.dp)
+                                    fontSize = 12.sp
                                 )
                                 Text(
                                     text = "200,00 TL",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color.Black
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.Black.copy(alpha = 0.8f)
                                 )
+
+                                Spacer(modifier = Modifier.height(2.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(
+                                        text = "Kullanılabilir Kredili Bakiye",
+                                        color = Color.Gray,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(end = 6.dp)
+                                    )
+                                    Text(
+                                        text = "200,00 TL",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color.Black
+                                    )
+                                }
                             }
                         }
                     }
                 )
             }
 
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(end = 16.dp, start = 16.dp, bottom = 8.dp),
-                shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    .padding(end = 16.dp, start = 16.dp, bottom = 6.dp),
+                shape = RoundedCornerShape(bottomStart = 6.dp, bottomEnd = 6.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
                 WalkthroughTarget(
@@ -286,7 +297,7 @@ fun BankHomeScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                                .padding(horizontal = 8.dp, vertical = 8.dp),
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -295,7 +306,6 @@ fun BankHomeScreen(
                                 title = "Para\nTransferi",
                                 backgroundBrush = brusBlue
                             )
-
                             ActionButton(
                                 icon = painterResource(R.drawable.ic_atm),
                                 title = "ATM'den\nPara Çek",
@@ -303,7 +313,7 @@ fun BankHomeScreen(
                             )
                             ActionButton(
                                 icon = painterResource(R.drawable.ic_all_options),
-                                title = ("Tüm\nİşlemler"),
+                                title = "Tüm\nİşlemler",
                                 backgroundBrush = brusOrange
                             )
                         }
@@ -311,11 +321,12 @@ fun BankHomeScreen(
                 )
             }
 
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(end = 16.dp, start = 16.dp, top = 8.dp, bottom = 8.dp),
-                shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
                 WalkthroughTarget(
@@ -329,12 +340,9 @@ fun BankHomeScreen(
                                     .fillMaxWidth()
                                     .background(
                                         brush = brusOrange,
-                                        shape = RoundedCornerShape(
-                                            topStart = 8.dp,
-                                            topEnd = 8.dp
-                                        )
+                                        shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
                                     )
-                                    .padding(16.dp)
+                                    .padding(10.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -344,79 +352,86 @@ fun BankHomeScreen(
                                     Text(
                                         "HESAP HAREKETLERİ",
                                         color = Color.White,
-                                        fontSize = 14.sp,
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
                                         "Tümünü Gör >",
                                         color = Color.White,
-                                        fontSize = 14.sp,
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
+
                             Card(
-                                modifier = Modifier
-                                    .fillMaxWidth(),
-                                shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(bottomStart = 6.dp, bottomEnd = 6.dp),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp), // gölge küçüldü
                                 colors = CardDefaults.cardColors(containerColor = Color.White)
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp),
+                                        .padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(
                                         modifier = Modifier
-                                            .height(70.dp)
+                                            .height(48.dp)
                                             .aspectRatio(1f)
-                                            .border(
-                                                1.dp,
-                                                Color.LightGray,
-                                                RoundedCornerShape(6.dp)
-                                            ),
-                                        horizontalAlignment = Alignment.CenterHorizontally
+                                            .border(1.dp, Color.LightGray, RoundedCornerShape(4.dp)),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
                                     ) {
-                                        Text("MAY", fontSize = 10.sp, color = Color.Gray)
                                         Text(
-                                            "13",
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.Black.copy(0.7f)
+                                            text = "MAY",
+                                            fontSize = 9.sp,
+                                            color = Color.Gray,
+                                            lineHeight = 9.sp,
+                                            modifier = Modifier.padding(0.dp)
                                         )
-                                        Text("2025", fontSize = 10.sp, color = Color.Gray)
+                                        Text(
+                                            text = "13",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.Black.copy(0.7f),
+                                            lineHeight = 12.sp,
+                                            modifier = Modifier.padding(0.dp)
+                                        )
+                                        Text(
+                                            text = "2025",
+                                            fontSize = 9.sp,
+                                            color = Color.Gray,
+                                            lineHeight = 9.sp,
+                                            modifier = Modifier.padding(0.dp)
+                                        )
                                     }
 
-                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Spacer(modifier = Modifier.width(12.dp))
 
-                                    Column(
-                                        modifier = Modifier.weight(1f)
-                                    ) {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = "Para Transferi",
-                                            fontSize = 16.sp,
+                                            fontSize = 14.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = Color.Black.copy(alpha = 0.7f)
                                         )
                                         Text(
                                             text = "NERMİN GÜLEŞ 'DAN GELEN FAST O...",
-                                            fontSize = 10.sp,
+                                            fontSize = 9.sp,
                                             color = Color.Gray,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
                                     }
 
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
 
-                                    Column(
-                                        horizontalAlignment = Alignment.End
-                                    ) {
+                                    Column(horizontalAlignment = Alignment.End) {
                                         Text(
                                             text = "200,00 TL",
-                                            fontSize = 16.sp,
+                                            fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color.Black.copy(alpha = 0.7f)
                                         )
@@ -424,13 +439,39 @@ fun BankHomeScreen(
                                             painter = painterResource(id = R.drawable.ic_receipt),
                                             contentDescription = null,
                                             tint = Color(0xFF2196F3),
-                                            modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.size(18.dp)
                                         )
                                     }
                                 }
                             }
                         }
                     }
+                )
+            }
+
+
+            Column(
+                modifier = Modifier
+                    .padding(end = 16.dp, start = 16.dp, top = 8.dp, bottom = 8.dp) // start değerini 16.dp yaptık
+            ) {
+                PromotionCard(
+                    title = "Diğer Bankalarım",
+                    subtitle = "Diğer banka hesaplarınızı kolayca yönetin.",
+                    gradient = Brush.horizontalGradient(
+                        colors = listOf(Color(0xFF0072B3), Color(0xFF8E24AA))
+                    ),
+                    imageId = R.drawable.bank_item
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                PromotionCard(
+                    title = "Size Özel Kampanyalar",
+                    subtitle = "",
+                    gradient = Brush.horizontalGradient(
+                        colors = listOf(HalkBankBlue, Color(0xFF00ACC1))
+                    ),
+                    imageId = R.drawable.ic_megaphone
                 )
             }
             Column(
