@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/navigation_home"
+        android:icon="@drawable/ic_home"
+        android:title="Ana Sayfa" />
+    <item
+        android:id="@+id/navigation_account"
+        android:icon="@drawable/ic_receipt"
+        android:title="Hesap/Kart" />
+    <item
+        android:id="@+id/navigation_application"
+        android:icon="@drawable/ic_plus_circle"
+        android:title="Başvuru" />
+    <item
+        android:id="@+id/navigation_assets"
+        android:icon="@drawable/ic_balace"
+        android:title="Varlıklar" />
+</menu>

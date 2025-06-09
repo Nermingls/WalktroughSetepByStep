@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Mevcut renkleriniz -->
-    <color name="halk_bank_blue">#1976D2</color>
-    <color name="roof_orange">#EA5015</color>
+    <color name="halk_bank_blue">#2196F3</color>
+    <color name="roof_orange">#FF5722</color>
     <color name="roof_light_gray">#F5F5F5</color>
     <color name="walkthrough_blue">#2196F3</color>
 
