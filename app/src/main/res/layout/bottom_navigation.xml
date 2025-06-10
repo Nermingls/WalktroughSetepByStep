@@ -23,7 +23,6 @@
         android:id="@+id/fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
         android:src="@drawable/ic_options"
         app:backgroundTint="@color/roof_orange"
         app:borderWidth="4dp"
@@ -33,6 +32,7 @@
         app:layout_constraintEnd_toEndOf="@+id/bottom_navigation"
         app:layout_constraintStart_toStartOf="@+id/bottom_navigation"
         app:layout_constraintTop_toTopOf="@+id/bottom_navigation"
+        android:layout_marginBottom="-35dp"
         app:maxImageSize="24dp"
         app:tint="@android:color/white" />
 

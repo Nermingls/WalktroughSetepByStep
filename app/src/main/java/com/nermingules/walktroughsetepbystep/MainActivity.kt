@@ -1,8 +1,8 @@
 package com.nermingules.walktroughsetepbystep
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewTreeObserver
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,11 +18,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -33,8 +32,9 @@ import com.nermingules.walktroughsetepbystep.ui.theme.RoofLightGray
 import com.nermingules.walktroughsetepbystep.ui.theme.RoofOrange
 import com.nermingules.walktroughsetepbystep.ui.theme.WalktroughBlue
 import com.nermingules.walktroughsetepbystep.ui.theme.WalktroughSetepByStepTheme
-import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
@@ -81,8 +81,8 @@ fun WalktroughSetepByStepApp() {
             ),
             WalkthroughStep(
                 id = "step_bottom",
-                title = "Bottom",
-                description = "BottomBar ",
+                title = "Bottom Navigation",
+                description = "Alt navigasyon menüsü buradadır",
                 targetKey = "bottomCard"
             ),
             WalkthroughStep(
@@ -108,8 +108,21 @@ fun WalktroughSetepByStepApp() {
         stepCounterFormat = "({current}/{total})",
     )
     val context = LocalContext.current
+    var screenWidth by remember { mutableStateOf(0f) }
+    var screenHeight by remember { mutableStateOf(0f) }
+    var bottomNavBounds by remember { mutableStateOf<Rect?>(null) }
+    var bottomNavFABBounds by remember { mutableStateOf<Rect?>(null) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    walkthroughState.start()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onGloballyPositioned { coordinates ->
+                screenWidth = coordinates.size.width.toFloat()
+                screenHeight = coordinates.size.height.toFloat()
+            }
+    ) {
         Scaffold(
             containerColor = RoofLightGray,
             bottomBar = {
@@ -118,6 +131,34 @@ fun WalktroughSetepByStepApp() {
                         LayoutInflater.from(context).inflate(R.layout.bottom_navigation, null).apply {
                             val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)
                             val fab = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fab)
+
+                            // Container'ın bounds'unu al (tüm bottom area)
+                            this.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+                                override fun onGlobalLayout() {
+                                    // Bottom navigation bounds
+                                    val bottomNavLocation = IntArray(2)
+                                    bottomNav.getLocationInWindow(bottomNavLocation)
+
+                                    bottomNavBounds = Rect(
+                                        bottomNavLocation[0].toFloat(),
+                                        bottomNavLocation[1].toFloat(),
+                                        (bottomNavLocation[0] + bottomNav.width).toFloat(),
+                                        (bottomNavLocation[1] + bottomNav.height).toFloat()
+                                    )
+
+                                    val fabLocation = IntArray(2)
+                                    fab.getLocationInWindow(fabLocation)
+
+                                    bottomNavFABBounds = Rect(
+                                        fabLocation[0].toFloat(),
+                                        fabLocation[1].toFloat(),
+                                        (fabLocation[0] + fab.width).toFloat(),
+                                        (fabLocation[1] + fab.height).toFloat()
+                                    )
+
+                                    this@apply.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                                }
+                            })
 
                             bottomNav.setOnItemSelectedListener { item ->
                                 when (item.itemId) {
@@ -129,68 +170,52 @@ fun WalktroughSetepByStepApp() {
                                 }
                             }
 
-                            fab.setOnClickListener {
-                                walkthroughState.start()
-                            }
-
-                            viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
-                                override fun onGlobalLayout() {
-                                    viewTreeObserver.removeOnGlobalLayoutListener(this)
-
-                                    // Bottom Navigation bounds
-                                    val bottomNavLocation = IntArray(2)
-                                    bottomNav.getLocationOnScreen(bottomNavLocation)
-                                    val bottomNavBounds = Rect(
-                                        offset = Offset(
-                                            bottomNavLocation[0].toFloat(),
-                                            bottomNavLocation[1].toFloat()
-                                        ),
-                                        size = Size(
-                                            bottomNav.width.toFloat(),
-                                            bottomNav.height.toFloat()
-                                        )
-                                    )
-
-                                    // FAB bounds
-                                    val fabLocation = IntArray(2)
-                                    fab.getLocationOnScreen(fabLocation)
-                                    val fabBounds = Rect(
-                                        offset = Offset(
-                                            fabLocation[0].toFloat(),
-                                            fabLocation[1].toFloat()
-                                        ),
-                                        size = Size(
-                                            fab.width.toFloat(),
-                                            fab.height.toFloat()
-                                        )
-                                    )
-
-                                    walkthroughState.addTargetPosition(
-                                        "bottomCard",
-                                        TargetPosition(
-                                            offset = bottomNavBounds.topLeft,
-                                            size = bottomNavBounds.size,
-                                            shape = WalkthroughShape.RoundedRect
-                                        )
-                                    )
-
-                                    walkthroughState.addTargetPosition(
-                                        "bottomCard",
-                                        TargetPosition(
-                                            offset = fabBounds.topLeft,
-                                            size = fabBounds.size,
-                                            shape = WalkthroughShape.Circle
-                                        )
-                                    )
-                                }
-                            })
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
+                val density = LocalDensity.current
+                val configuration = LocalConfiguration.current
+                LaunchedEffect(screenWidth, screenHeight, bottomNavBounds, bottomNavFABBounds) {
+                    if (screenWidth > 0 && screenHeight > 0) {
+                        walkthroughState.clearTargetPositions("bottomCard")
+                        val topOffset = with(density) { 30.dp.toPx() }
+
+                        // Bottom Navigation için gerçek bounds kullan
+                        bottomNavBounds?.let { bounds ->
+                            walkthroughState.addTargetPosition(
+                                key = "bottomCard",
+                                x = bounds.left,
+                                y = bounds.top - topOffset,
+                                width = bounds.width,
+                                height = bounds.height + topOffset,
+                                shape = WalkthroughShape.RoundedRect
+                            )
+
+
+                        // FAB için gerçek bounds kullan ve biraz padding ekle
+                        bottomNavFABBounds?.let { fabBounds ->
+                            walkthroughState.addTargetPosition(
+                                key = "bottomCard",
+//                                TargetPosition(
+//                                    offset = fabBounds.topLeft,
+//                                    size = fabBounds.size,
+//                                    shape = WalkthroughShape.Circle
+//                                )
+                                position = CustomTargetPosition.BOTTOM_CENTER,
+                                width = fabBounds.width,
+                                height = fabBounds.height,
+                                screenWidth = screenWidth,
+                                screenHeight = screenHeight - with(density) { 15.dp.toPx() },
+                                shape = WalkthroughShape.Circle
+                            )
+
+                            Log.d("BottomNavBounds","FABBounds: $fabBounds \n BottomNavBounds: $bottomNavBounds\n screenHeight : $screenHeight\n screenWidth:$screenWidth")
+                        } }
+                    }
+                }
             }
         ) { paddingValues ->
-            // Scaffold content burada devam eder
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -228,6 +253,7 @@ fun WalktroughSetepByStepApp() {
             )
         }
     }
+
 }
 
 @Composable

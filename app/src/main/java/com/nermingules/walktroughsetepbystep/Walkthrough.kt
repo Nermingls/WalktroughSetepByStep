@@ -176,6 +176,61 @@ class WalkthroughState(
         targetPositions = targetPositions + (key to existingPositions + position)
     }
 
+    fun addTargetPosition(
+        key: String,
+        position: CustomTargetPosition,
+        width: Float = 100f,
+        height: Float = 100f,
+        screenWidth: Float,
+        screenHeight: Float,
+        shape: WalkthroughShape = WalkthroughShape.RoundedRect
+    ) {
+        val (x, y) = when (position) {
+            CustomTargetPosition.TOP_LEFT -> Pair(16f, 16f)
+            CustomTargetPosition.TOP_CENTER -> Pair((screenWidth - width) / 2f, 16f)
+            CustomTargetPosition.TOP_RIGHT -> Pair(screenWidth - width - 16f, 16f)
+            CustomTargetPosition.CENTER_LEFT -> Pair(16f, (screenHeight - height) / 2f)
+            CustomTargetPosition.CENTER -> Pair((screenWidth - width) / 2f, (screenHeight - height) / 2f)
+            CustomTargetPosition.CENTER_RIGHT -> Pair(screenWidth - width - 16f, (screenHeight - height) / 2f)
+            CustomTargetPosition.BOTTOM_LEFT -> Pair(16f, screenHeight - height - 16f)
+            CustomTargetPosition.BOTTOM_CENTER -> Pair((screenWidth - width) / 2f, screenHeight - height - 16f)
+            CustomTargetPosition.BOTTOM_RIGHT -> Pair(screenWidth - width - 16f, screenHeight - height - 16f)
+        }
+
+        // Update customTargets map
+        customTargets[key] = TargetInfo(
+            bounds = androidx.compose.ui.geometry.Rect(
+                offset = Offset(x, y),
+                size = Size(width, height)
+            )
+        )
+
+        // Create TargetPosition and add it
+        val targetPosition = TargetPosition(
+            offset = Offset(x, y),
+            size = Size(width, height),
+            shape = shape
+        )
+        addTargetPosition(key, targetPosition)
+    }
+
+    // Additional convenience function for direct coordinate input
+    fun addTargetPosition(
+        key: String,
+        x: Float,
+        y: Float,
+        width: Float,
+        height: Float,
+        shape: WalkthroughShape = WalkthroughShape.RoundedRect
+    ) {
+        val targetPosition = TargetPosition(
+            offset = Offset(x, y),
+            size = Size(width, height),
+            shape = shape
+        )
+        addTargetPosition(key, targetPosition)
+    }
+
     internal fun clearTargetPositions(key: String) {
         targetPositions = targetPositions - key
     }
@@ -232,7 +287,6 @@ class WalkthroughState(
         addTargetPosition(key, customPosition)
     }
 }
-
 @Composable
 fun WalkthroughTarget(
     key: String,
