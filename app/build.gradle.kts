@@ -60,5 +60,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
 
 }
