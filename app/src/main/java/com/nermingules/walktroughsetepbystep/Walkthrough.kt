@@ -197,7 +197,6 @@ class WalkthroughState(
             CustomTargetPosition.BOTTOM_RIGHT -> Pair(screenWidth - width - 16f, screenHeight - height - 16f)
         }
 
-        // Update customTargets map
         customTargets[key] = TargetInfo(
             bounds = androidx.compose.ui.geometry.Rect(
                 offset = Offset(x, y),
@@ -205,7 +204,6 @@ class WalkthroughState(
             )
         )
 
-        // Create TargetPosition and add it
         val targetPosition = TargetPosition(
             offset = Offset(x, y),
             size = Size(width, height),
@@ -214,7 +212,6 @@ class WalkthroughState(
         addTargetPosition(key, targetPosition)
     }
 
-    // Additional convenience function for direct coordinate input
     fun addTargetPosition(
         key: String,
         x: Float,
@@ -343,13 +340,11 @@ fun DrawScope.drawMultipleHighlights(
     overlayColor: Color,
     highlightCornerRadius: Float
 ) {
-    // Önce overlay'i çiz
     drawRect(
         color = overlayColor,
         size = size
     )
 
-    // Her bir highlight için hole açılacak
     highlightRects.forEach { (highlightRect, shape) ->
         when (shape) {
             WalkthroughShape.Circle -> {
@@ -476,7 +471,6 @@ fun WalkthroughOverlay(
                     }
                 }
 
-                // Çoklu target position için card konumunu hesapla
                 if (targetPositions.isNotEmpty()) {
                     var cardHeightPx by remember { mutableIntStateOf(250) }
                     val cardOffset = calculateCardPosition(
@@ -544,7 +538,6 @@ private fun calculateCardPosition(
 
     val cardX = (canvasSize.width - config.cardMaxWidth) / 2f
 
-    // Tüm hole'ların bounds'unu hesapla
     val allBounds = targetPositions.map { pos ->
         Rect(
             offset = Offset(
@@ -565,7 +558,6 @@ private fun calculateCardPosition(
     val availableSpaceBelow = canvasSize.height - bottomMost - screenMargin
     val totalRequiredSpace = cardHeight + spacingFromHighlight
 
-    // Önce hole'ların arasında yer var mı kontrol et
     if (allBounds.size >= 2) {
         for (i in 0 until allBounds.size - 1) {
             val currentBottom = allBounds[i].bottom
@@ -573,13 +565,11 @@ private fun calculateCardPosition(
             val gapSize = nextTop - currentBottom
 
             if (gapSize >= totalRequiredSpace) {
-                // Arada yeterli yer var, buraya yerleştir
                 return Offset(cardX, currentBottom + spacingFromHighlight / 2)
             }
         }
     }
 
-    // Arada yer yoksa üst/alt seçeneklerini değerlendir
     val cardY = when {
         availableSpaceAbove >= totalRequiredSpace -> {
             topMost - cardHeight - spacingFromHighlight

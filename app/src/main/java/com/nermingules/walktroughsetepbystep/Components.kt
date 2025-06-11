@@ -286,7 +286,7 @@ fun PromotionCard(
             modifier = Modifier
                 .fillMaxSize()
                 .background(gradient)
-                .padding(horizontal = 12.dp) // biraz azaltıldı
+                .padding(horizontal = 12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxSize(),
